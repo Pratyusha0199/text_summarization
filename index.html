@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Summarization</title>
+</head>
+<body>
+
+    <h1>Text Summarization</h1>
+    <textarea id="inputText" rows="10" cols="50" placeholder="Enter your text here..."></textarea><br>
+    <button onclick="summarizeText()">Summarize</button>
+
+    <h2>Summary:</h2>
+    <p id="output"></p> <!-- Area to display the summary -->
+
+    <script>
+        function summarizeText() {
+            const inputText = document.getElementById("inputText").value; // Get the input text
+
+            fetch("http://localhost:5000/summarize", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ text: inputText }) // Send the input text as JSON
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json(); // Parse the JSON from the response
+            })
+            .then(data => {
+                console.log(data); // Log the full response to see its structure
+                console.log(data.summary); // Log just the summary to see the output
+                document.getElementById("output").innerText = data.summary; // Display the summary
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        }
+    </script>
+
+</body>
+</html>
+
