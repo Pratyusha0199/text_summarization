@@ -1,26 +1,48 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Import CORS from flask-cors
+from flask_cors import CORS
 from transformers import pipeline
-# Initialize the Flask app and enable CORS
-app = Flask(__name__)
-CORS(app)  # This allows all origins to access the Flask app
 
-# Initialize the summarizer pipeline
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+app = Flask(__name__)
+CORS(app)  
+try:
+    summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+except Exception as e:
+    print("Error loading summarization model:", e)
+    summarizer = None
+
 
 @app.route("/summarize", methods=["POST"])
 def summarize():
+
+    if summarizer is None:
+        return jsonify({"error": "Summarization model is not available."}), 500
+
     input_data = request.get_json(silent=True)
+
     if not input_data or "text" not in input_data:
-        return jsonify({"error": "Invalid input or no text provided"}), 400
+        return jsonify({"error": "Invalid input or no text provided."}), 400
 
-    text = input_data.get("text", "")
-    if len(text) > 100024:
-        return jsonify({"error": "Input text is too long"}), 400
+    text = input_data.get("text", "").strip()
 
-    summary = summarizer(text, max_length=100, min_length=30, do_sample=False)
-    return jsonify({"summary": summary[0]["summary_text"]})
+    if not text:
+        return jsonify({"error": "Text is empty."}), 400
+
+    MAX_CHARS = 4000
+    if len(text) > MAX_CHARS:
+        return jsonify({"error": f"Input text is too long. Limit is {MAX_CHARS} characters."}), 400
+
+    try:
+        summary = summarizer(
+            text,
+            max_length=120,  
+            min_length=40,   
+            do_sample=False
+        )
+        return jsonify({"summary": summary[0]["summary_text"]})
+    except Exception as e:
+        print("Error during summarization:", e)
+        return jsonify({"error": "Failed to generate summary."}), 500
+
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-
+    app.run(host="0.0.0.0", port=5000, debug=True)
